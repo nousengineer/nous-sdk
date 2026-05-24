@@ -145,6 +145,33 @@ export type {
 export type { TokenStreamOptions } from './src/types.js'
 export { TokenStream } from './src/types.js'
 
+// ─── Model catalog (models.dev) ───────────────────────────────────────────────
+export type {
+  ModelInfo,
+  ModelModalities,
+  ModelLimit,
+  ModelCost,
+  ProviderInfo,
+  ModelCatalog,
+  CostBreakdown,
+} from './src/modelCatalog.js'
+export {
+  fetchModelCatalog,
+  getCachedModelCatalog,
+  lookupModel,
+  findModel,
+  getProvider,
+  modelHasReasoning,
+  modelHasToolCall,
+  modelHasVision,
+  getContextWindow,
+  estimateCost,
+  getProviderEnvVars,
+  isProviderConfigured,
+  listModels,
+  findProvidersByCapability,
+} from './src/modelCatalog.js'
+
 // ─── Effort level utilities ───────────────────────────────────────────────────
 export type { EffortLevel } from './src/effort.js'
 export { ALL_EFFORT_LEVELS, modelSupportsEffort, modelSupportsMaxEffort, availableEffortLevels } from './src/effort.js'
