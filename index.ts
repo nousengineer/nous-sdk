@@ -144,3 +144,22 @@ export type {
 // ─── Stream types ─────────────────────────────────────────────────────────────
 export type { TokenStreamOptions } from './src/types.js'
 export { TokenStream } from './src/types.js'
+
+// ─── Effort level utilities ───────────────────────────────────────────────────
+export type { EffortLevel } from './src/effort.js'
+export { ALL_EFFORT_LEVELS, modelSupportsEffort, modelSupportsMaxEffort, availableEffortLevels } from './src/effort.js'
+
+// ─── GitHub Copilot OAuth ─────────────────────────────────────────────────────
+export type { DeviceFlowStart, PollResult } from './src/copilotAuth.js'
+export {
+  COPILOT_CLIENT_ID,
+  COPILOT_IDE_HEADERS,
+  DEFAULT_COPILOT_API_BASE_URL,
+  deriveCopilotApiBaseUrlFromToken,
+  startDeviceFlow,
+  pollDeviceFlow,
+  getCopilotSessionToken,
+  clearCopilotSessionCache,
+  getCopilotBearer,
+  copilotApiBaseFromSessionToken,
+} from './src/copilotAuth.js'
