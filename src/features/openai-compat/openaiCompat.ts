@@ -425,9 +425,11 @@ export async function* translateStream(response: Response, model: string): Async
     for await (const evt of parseSSEFrames(response)) {
       if (!evt || typeof evt !== 'object') continue
       const e = evt as {
+        error?: { message?: string; code?: string | number } | string
         choices?: Array<{
           delta?: {
             content?: string | null
+            reasoning_content?: string | null
             tool_calls?: Array<{
               index?: number
               id?: string
@@ -438,6 +440,13 @@ export async function* translateStream(response: Response, model: string): Async
           finish_reason?: string | null
         }>
         usage?: { prompt_tokens?: number; completion_tokens?: number }
+      }
+
+      // Surface upstream error frames (e.g. LM Studio context overflow) instead of
+      // silently yielding an empty assistant message.
+      if (e.error) {
+        const msg = typeof e.error === 'string' ? e.error : (e.error.message ?? 'Unknown upstream error')
+        throw new OpenAICompatError(`${model}: ${msg}`, 0)
       }
 
       if (e.usage) {
