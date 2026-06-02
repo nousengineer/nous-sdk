@@ -1,4 +1,18 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { registerProviderConfig } from '../provider/providerRegistry.js'
+
+const { execFileSyncMock } = vi.hoisted(() => ({
+  execFileSyncMock: vi.fn(),
+}))
+
+vi.mock('node:child_process', async () => {
+  const actual = await import('node:child_process')
+  return {
+    ...actual,
+    execFileSync: execFileSyncMock,
+  }
+})
+
 import { discoverProviderModelsSync, getDiscoveredModelContextWindow, getParser, __populateDiscoveredModelContextStore, __resetDiscoveredModelContextStore } from './modelCatalog.js'
 import type { DiscoveredModel } from './modelCatalog.js'
 
@@ -159,6 +173,7 @@ describe('parseLmstudioModelsResponse (via getParser)', () => {
 
 describe('discoveredModelContextStore', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     __resetDiscoveredModelContextStore()
     const models = getParser('lmstudio')(rawJson())
     __populateDiscoveredModelContextStore(models)
@@ -186,6 +201,126 @@ describe('discoverProviderModelsSync (reachability)', () => {
     expect(result.reachable).toBe(false)
     expect(result.models).toHaveLength(0)
     expect(result.error).toBeTruthy()
+  })
+
+  it('uses bearer auth for openai-compatible providers', () => {
+    registerProviderConfig({
+      id: 'openai-live-test',
+      name: 'OpenAI Live Test',
+      baseURL: 'https://example.test/v1',
+      requiresApiKey: true,
+      discoveryEndpoint: 'openai',
+      authMethod: 'bearer',
+      envVars: [],
+    })
+    execFileSyncMock.mockReturnValueOnce(openaiRawJson())
+
+    const result = discoverProviderModelsSync('openai-live-test', {
+      apiKey: 'openai-secret',
+      timeoutMs: 2345,
+    })
+
+    expect(result.reachable).toBe(true)
+    expect(result.models.map((model) => model.id)).toEqual(['gpt-4o', 'gpt-4o-mini'])
+    expect(execFileSyncMock).toHaveBeenCalledWith(
+      'curl',
+      [
+        '-sS',
+        '--max-time',
+        '2',
+        'https://example.test/v1/models',
+        '-H',
+        'Authorization: Bearer openai-secret',
+      ],
+      expect.objectContaining({
+        encoding: 'utf8',
+        timeout: 2345,
+      }),
+    )
+  })
+
+  it('uses x-api-key auth and provider headers when configured', () => {
+    registerProviderConfig({
+      id: 'anthropic-live-test',
+      name: 'Anthropic Live Test',
+      baseURL: 'https://api.anthropic.com/v1',
+      requiresApiKey: true,
+      discoveryEndpoint: 'openai',
+      authMethod: 'x-api-key',
+      envVars: [],
+      headers: {
+        'anthropic-version': '2023-06-01',
+      },
+    })
+    execFileSyncMock.mockReturnValueOnce(
+      JSON.stringify({
+        data: [
+          { id: 'claude-sonnet-4-20250514' },
+          { id: 'claude-opus-4-20250514' },
+        ],
+      }),
+    )
+
+    const result = discoverProviderModelsSync('anthropic-live-test', {
+      apiKey: 'anthropic-secret',
+      timeoutMs: 3456,
+    })
+
+    expect(result.reachable).toBe(true)
+    expect(result.models.map((model) => model.id)).toEqual([
+      'claude-sonnet-4-20250514',
+      'claude-opus-4-20250514',
+    ])
+    expect(execFileSyncMock).toHaveBeenCalledWith(
+      'curl',
+      [
+        '-sS',
+        '--max-time',
+        '3',
+        'https://api.anthropic.com/v1/models',
+        '-H',
+        'x-api-key: anthropic-secret',
+        '-H',
+        'anthropic-version: 2023-06-01',
+      ],
+      expect.objectContaining({
+        encoding: 'utf8',
+        timeout: 3456,
+      }),
+    )
+  })
+
+  it('uses the built-in anthropic provider config for live discovery', () => {
+    execFileSyncMock.mockReturnValueOnce(
+      JSON.stringify({
+        data: [{ id: 'claude-sonnet-4-20250514' }],
+      }),
+    )
+
+    const result = discoverProviderModelsSync('anthropic', {
+      apiKey: 'anthropic-secret',
+      timeoutMs: 4567,
+    })
+
+    expect(result.reachable).toBe(true)
+    expect(result.models.map((model) => model.id)).toEqual(['claude-sonnet-4-20250514'])
+    expect(execFileSyncMock).toHaveBeenCalledWith(
+      'curl',
+      [
+        '-sS',
+        '--max-time',
+        '4',
+        'https://api.anthropic.com/v1/models',
+        '-H',
+        'x-api-key: anthropic-secret',
+        '-H',
+        'anthropic-version: 2023-06-01',
+      ],
+      expect.objectContaining({
+        encoding: 'utf8',
+        timeout: 4567,
+      }),
+    )
   })
 })
 

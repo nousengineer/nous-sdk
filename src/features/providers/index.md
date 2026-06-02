@@ -18,6 +18,7 @@ CHRONOKAIRO_USE_<NOME>=1
 |---|---|---|---|
 | [`ollama/`](./ollama/) | [Ollama](https://ollama.com) | Local / Cloud | `localhost:11434` |
 | [`lmstudio/`](./lmstudio/) | [LM Studio](https://lmstudio.ai) | Local | `localhost:1234` |
+| [`anthropic/`](./anthropic/) | [Anthropic Claude API](https://platform.claude.com/docs) | Cloud | `api.anthropic.com` |
 | [`nvidia/`](./nvidia/) | [NVIDIA NIM API](https://build.nvidia.com) | Cloud | `integrate.api.nvidia.com` |
 | [`ollama-cloud/`](./ollama-cloud/) | Ollama (variante cloud) | Cloud | `ollama.com` |
 

@@ -1,15 +1,19 @@
-import { buildManifestModelProviderConfig } from "code/plugin-sdk/provider-catalog-shared";
 import type { ModelProviderConfig } from "code/plugin-sdk/provider-model-shared";
-import manifest from "./code.plugin.json" with { type: "json" };
+import {
+  NVIDIA_DEFAULT_API_KEY_ENV_VAR,
+  NVIDIA_DEFAULT_INFERENCE_BASE_URL,
+  NVIDIA_DEFAULT_MODEL_ID,
+} from "./src/defaults.js";
+import { buildNvidiaSeedModels, normalizeNvidiaConfiguredCatalogEntries } from "./src/models.js";
 
-export const NVIDIA_DEFAULT_MODEL_ID = "nvidia/nemotron-3-super-120b-a12b";
+export { NVIDIA_DEFAULT_MODEL_ID } from "./src/defaults.js";
 
 export function buildNvidiaProvider(): ModelProviderConfig {
   return {
-    ...buildManifestModelProviderConfig({
-      providerId: "nvidia",
-      catalog: manifest.modelCatalog.providers.nvidia,
-    }),
-    apiKey: "NVIDIA_API_KEY",
+    api: "openai-completions",
+    baseUrl: NVIDIA_DEFAULT_INFERENCE_BASE_URL,
+    apiKey: NVIDIA_DEFAULT_API_KEY_ENV_VAR,
+    auth: "api-key",
+    models: normalizeNvidiaConfiguredCatalogEntries(buildNvidiaSeedModels()),
   };
 }

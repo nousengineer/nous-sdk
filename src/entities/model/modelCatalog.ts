@@ -644,6 +644,32 @@ export function getParser(discoveryType: string): ParserFn {
   }
 }
 
+function buildDiscoveryHeaders(providerId: string, apiKey?: string): string[] {
+  const cfg = getProviderConfig(providerId)
+  if (!cfg) return []
+
+  const headers: string[] = []
+
+  if (apiKey) {
+    switch (cfg.authMethod) {
+      case 'bearer':
+        headers.push(`Authorization: Bearer ${apiKey}`)
+        break
+      case 'x-api-key':
+        headers.push(`x-api-key: ${apiKey}`)
+        break
+      default:
+        break
+    }
+  }
+
+  for (const [name, value] of Object.entries(cfg.headers ?? {})) {
+    headers.push(`${name}: ${value}`)
+  }
+
+  return headers
+}
+
 /**
  * Discover available models from a provider via its live HTTP endpoint.
  * Uses curl (sync) under the hood for compatibility with CLI sync contexts.
@@ -657,6 +683,7 @@ export function discoverProviderModelsSync(
   options?: { baseURL?: string; apiKey?: string; timeoutMs?: number },
 ): DiscoveredModelsResult {
   const pId = normalizeProviderId(providerId)
+  const cfg = getProviderConfig(pId)
   const endpoint = discoverModelsEndpoint(pId)
   if (!endpoint) return { reachable: false, models: [], error: `No discovery endpoint for provider: ${pId}` }
 
@@ -664,7 +691,6 @@ export function discoverProviderModelsSync(
   let apiKey: string | undefined
 
   if (options?.baseURL) {
-    const cfg = getProviderConfig(pId)
     const discoveryType = cfg?.discoveryEndpoint ?? 'openai'
     const base = options.baseURL.replace(/\/$/, '').replace(/\/v1$/, '')
     url = discoveryType === 'ollama'
@@ -678,7 +704,6 @@ export function discoverProviderModelsSync(
 
   apiKey = options?.apiKey
   if (!apiKey) {
-    const cfg = getProviderConfig(pId)
     for (const v of cfg?.envVars ?? []) {
       const val = process.env[v]
       if (val?.trim()) { apiKey = val.trim(); break }
@@ -689,11 +714,11 @@ export function discoverProviderModelsSync(
 
   try {
     const args = ['-sS', '--max-time', String(Math.floor(timeoutMs / 1000)), url]
-    if (apiKey) {
-      args.push('-H', `Authorization: Bearer ${apiKey}`)
+    for (const header of buildDiscoveryHeaders(pId, apiKey)) {
+      args.push('-H', header)
     }
     const raw = execFileSync('curl', args, { stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8', timeout: timeoutMs })
-    const parser = getParser(getProviderConfig(pId)?.discoveryEndpoint ?? 'openai')
+    const parser = getParser(cfg?.discoveryEndpoint ?? 'openai')
     const models = parser(raw)
     for (const m of models) {
       if (m.contextWindow && m.contextWindow > 0) {
